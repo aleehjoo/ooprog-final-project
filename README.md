@@ -1,13 +1,13 @@
 # 🏠 RoomEase — Smart Property & Tenant Management System
 
-## 📘 Project Description (≈300 words)
+## 📘 Project Description
 
 **RoomEase** is a lightweight yet scalable property management system designed to help **small landlords, dorm managers, or boarding house owners** track tenants, payments, and room availability efficiently. The system addresses a common real-world challenge: most small property owners still rely on **manual logs, spreadsheets, or chat messages** to handle tenant data — a process prone to delays, confusion, and record inconsistencies.
 
 RoomEase bridges this gap through a **Java-based backend** and a **Next.js (TypeScript) web interface**, providing a clear and responsive way to manage properties, track balances, and process maintenance requests.  
 The **Java backend** handles file I/O, business logic, and optional offline storage, while the **Next.js frontend** offers a modern, responsive dashboard accessible from any device.  
 
-Data synchronization is managed via a **RESTful API** built with **Spring Boot (Java)**, connecting seamlessly with a **PostgreSQL** database for structured, scalable data management. Users can log in as landlords or tenants — landlords can register tenants, view payment history, and mark rooms as occupied, while tenants can check balances, submit maintenance requests, and upload proof of payment.  
+Data synchronization is managed via a **RESTful API** built with **Spring Boot (Java)**, connecting seamlessly with a **NoSQL** database for flexible schema design. Users can log in as landlords or tenants — landlords can register tenants, view payment history, and mark rooms as occupied, while tenants can check balances, submit maintenance requests, and upload proof of payment.  
 
 Future improvements could include automated rent reminders, payment gateway integration (e.g., PayMongo or Stripe), and real-time dashboards using WebSockets for instant updates. The system remains achievable within 4–5 weeks, yet holds **strong scalability and real-world relevance**, ideal for a student-led project with professional-grade potential.
 
