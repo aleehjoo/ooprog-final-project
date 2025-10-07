@@ -15,18 +15,18 @@ Future improvements could include automated rent reminders, payment gateway inte
 
 ## ⚙️ Tech Stack
 
-| Technology | Purpose | Why Use It |
-|-------------|----------|-------------|
+| **Technology** | **Purpose** | **Why Use It** |
+|----------------|-------------|----------------|
 | **Java (Spring Boot)** | Backend API and business logic | Reliable, scalable, and widely used for enterprise-level RESTful services |
 | **Next.js (TypeScript)** | Frontend web application | Provides a modern, performant UI with strong typing for maintainability |
-| **PostgreSQL** | Relational database | Strong relational data modeling; supports future analytics and queries |
-| **Prisma ORM** | Database interaction from Next.js | Simplifies TypeScript-side queries and enforces schema integrity |
+| **MongoDB** | NoSQL database | Flexible schema design ideal for managing tenant, payment, and room data; integrates easily with Spring Boot |
+| **Spring Data MongoDB** | Database interaction from Java backend | Simplifies database access and CRUD operations using repository patterns |
 | **Axios / Fetch API** | Communication between frontend and backend | Streamlined API requests and error handling |
-| **Docker (optional)** | Containerization | Simplifies deployment and ensures consistent dev environment |
+| **Docker (optional)** | Containerization | Simplifies deployment and ensures consistent development environment |
 | **JWT (JSON Web Tokens)** | Authentication | Secure and stateless user sessions between Java and Next.js |
 | **Maven / Gradle** | Java build and dependency management | Reliable and widely supported for Java projects |
-| **Vercel / Render** | Web deployment | Simple and free-tier hosting for Next.js apps |
-| **Railway / Supabase / ElephantSQL** | Database hosting | Easy cloud-hosted PostgreSQL options for student projects |
+| **Vercel** | Web deployment | Simple and free-tier hosting for Next.js apps |
+| **Render** | Backend hosting | Easy and cost-effective cloud platform for deploying Spring Boot applications with MongoDB connectivity |
 
 ---
 
