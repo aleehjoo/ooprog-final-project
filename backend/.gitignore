@@ -1,33 +1,62 @@
 HELP.md
-target/
-.mvn/wrapper/maven-wrapper.jar
+# ========================
+# Maven / Java
+# ========================
+/target/
+!.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+# Ignore compiled class files
+*.class
 
-### IntelliJ IDEA ###
-.idea
+# Ignore logs
+*.log
+
+# Ignore temporary files
+*.tmp
+*.bak
+*.swp
+
+# ========================
+# IDEs
+# ========================
+
+# IntelliJ IDEA
+.idea/
 *.iws
 *.iml
 *.ipr
 
-### NetBeans ###
+# Eclipse / STS
+.project
+.classpath
+.settings/
+.springBeans
+.apt_generated
+.factorypath
+.sts4-cache/
+
+# NetBeans
 /nbproject/private/
 /nbbuild/
 /dist/
 /nbdist/
 /.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
-### VS Code ###
+# VS Code
 .vscode/
+
+# ========================
+# Environment / sensitive files
+# ========================
+# Ignore properties files containing credentials (MongoDB, API keys, etc.)
+/backend/src/main/resources/application.properties
+/backend/src/main/resources/*.env
+!/backend/src/main/resources/application-example.properties
+
+# ========================
+# OS files
+# ========================
+.DS_Store
+Thumbs.db
