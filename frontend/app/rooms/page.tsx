@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus } from "lucide-react";
+import Link from "next/link";
 
 export default function RoomsPage() {
   return (
@@ -63,10 +64,12 @@ export default function RoomsPage() {
                   placeholder="Search rooms..."
                   className="flex-1"
                 />
-                <Button size="default">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Room
-                </Button>
+                <Link href="/rooms/add-room">
+                  <Button size="default">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Room
+                  </Button>
+                </Link>
               </div>
             </div>
           </CardContent>

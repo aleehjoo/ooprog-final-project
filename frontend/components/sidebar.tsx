@@ -10,9 +10,6 @@ import {
   Home,
   Users,
   DollarSign,
-  Wrench,
-  BarChart3,
-  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -25,22 +22,22 @@ interface NavItem {
 const navItems: NavItem[] = [
   {
     label: "Dashboard",
-    href: "/dashboard",
+    href: "/",
     icon: <LayoutDashboard className="h-5 w-5" />,
   },
   {
     label: "Rooms",
-    href: "/dashboard/rooms",
+    href: "/rooms",
     icon: <Home className="h-5 w-5" />,
   },
   {
     label: "Tenants",
-    href: "/dashboard/tenants",
+    href: "/tenants",
     icon: <Users className="h-5 w-5" />,
   },
   {
     label: "Payments",
-    href: "/dashboard/payments",
+    href: "/payments",
     icon: <DollarSign className="h-5 w-5" />,
   },
 ];
@@ -55,10 +52,9 @@ export function Sidebar() {
         collapsed ? "w-20" : "w-64"
       }`}
     >
-      {/* Header */}
       <div className="p-6 flex items-center justify-between">
         {!collapsed && (
-          <h2 className="text-xl font-bold text-primary">RoomEase</h2>
+          <h2 className="text-2xl font-bold text-primary">RoomEase</h2>
         )}
         <Button
           variant="ghost"
@@ -74,7 +70,6 @@ export function Sidebar() {
         </Button>
       </div>
 
-      {/* Navigation */}
       <nav className="px-3 space-y-2 flex-1">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
@@ -94,19 +89,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-
-      {/* Bottom Section */}
-      <div className="p-3 border-t border-border">
-        <Button
-          variant="ghost"
-          className={`w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 ${
-            collapsed ? "px-0 justify-center" : ""
-          }`}
-        >
-          <LogOut className="h-5 w-5" />
-          {!collapsed && <span className="ml-2">Logout</span>}
-        </Button>
-      </div>
     </div>
   );
 }
