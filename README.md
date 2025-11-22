@@ -62,7 +62,7 @@ npm run dev
 
 4. View in browser:
 
-Open [Tap me!](http://localhost:3000)
+Open (http://localhost:3000) or [Tap me!](http://localhost:3000)
 
 
 # 🏠 RoomEase — Smart Property & Tenant Management System
