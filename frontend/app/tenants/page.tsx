@@ -8,6 +8,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { getAllTenants, patchTenant, getAllRooms, patchRoom } from "@/lib/api";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
 export interface Tenant {
   id: string;
@@ -15,6 +22,7 @@ export interface Tenant {
   rent: number;
   roomId?: string | null;
   roomName?: string;
+  paymentStatus?: string;
 }
 
 export interface Room {
@@ -60,6 +68,30 @@ export default function TenantsPage() {
     t.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Calculate rent for a tenant based on their room
+  const calculateTenantRent = (tenant: Tenant): number => {
+    if (!tenant.roomName) {
+      return 0; // No room, no rent
+    }
+
+    // Find the room this tenant is in
+    const tenantRoom = rooms.find((r) => r.name === tenant.roomName);
+    if (!tenantRoom) {
+      return 0;
+    }
+
+    // Count how many tenants are in this room
+    const tenantsInRoom = tenants.filter((t) => t.roomName === tenantRoom.name);
+    const tenantCount = tenantsInRoom.length;
+
+    if (tenantCount === 0) {
+      return 0;
+    }
+
+    // Rent is room rent (in cents) divided by number of tenants, then convert to pesos
+    return tenantRoom.rent / tenantCount / 100;
+  };
+
   const handleEdit = (tenant: Tenant) => {
     setBackupTenant({ ...tenant });
     setEditingId(tenant.id);
@@ -78,47 +110,59 @@ export default function TenantsPage() {
   const handleSave = async (tenant: Tenant) => {
     setSavingId(tenant.id);
     try {
-      // Update tenant first
-      await patchTenant(tenant.id, tenant);
+      // Get the original tenant to check for room changes
+      const originalTenant = tenants.find((t) => t.id === tenant.id);
+      if (!originalTenant) return;
 
-      setTenants((prev) => prev.map((t) => (t.id === tenant.id ? tenant : t)));
+      // Calculate rent before saving (rent is not editable, calculated from room)
+      const calculatedRent = calculateTenantRent(tenant) * 100; // Convert to cents
+      
+      // Update tenant with calculated rent and payment status
+      const tenantToSave = {
+        ...tenant,
+        rent: calculatedRent,
+        paymentStatus: tenant.paymentStatus || "not_paid",
+      };
+      
+      await patchTenant(tenant.id, tenantToSave);
 
-      // Update all rooms affected
-      for (const room of rooms) {
-        const tenantsInRoom = tenants
-          .map((t) => (t.id === tenant.id ? tenant : t))
-          .filter((t) => t.roomId === room.id);
+      // Find the room the tenant is assigned to (by roomName)
+      const assignedRoom = rooms.find((r) => r.name === tenant.roomName);
+      const previousRoom = rooms.find((r) => r.name === originalTenant.roomName);
 
-        const updatedRoom: Room = {
-          ...room,
-          occupied: tenantsInRoom.length > 0,
-          tenantNames: tenantsInRoom.map((t) => t.name),
-        };
+      // Remove tenant from previous room if room changed
+      if (previousRoom && previousRoom.id !== assignedRoom?.id) {
+        const updatedTenantNames = (previousRoom.tenantNames || []).filter(
+          (name) => name !== tenant.name
+        );
+        await patchRoom(previousRoom.id, {
+          tenantNames: updatedTenantNames,
+          occupied: updatedTenantNames.length > 0,
+          status: updatedTenantNames.length > 0 ? "occupied" : previousRoom.status || "available",
+        });
+      }
 
-        // Only patch if the room changed
-        if (
-          updatedRoom.occupied !== room.occupied ||
-          JSON.stringify(updatedRoom.tenantNames) !==
-            JSON.stringify(room.tenantNames)
-        ) {
-          await patchRoom(room.id, updatedRoom);
+      // Add tenant to new room if assigned
+      if (assignedRoom) {
+        const currentTenantNames = assignedRoom.tenantNames || [];
+        if (!currentTenantNames.includes(tenant.name)) {
+          const updatedTenantNames = [...currentTenantNames, tenant.name];
+          await patchRoom(assignedRoom.id, {
+            tenantNames: updatedTenantNames,
+            occupied: true,
+            status: "occupied",
+          });
         }
       }
 
-      // Update rooms state locally
-      setRooms((prev) =>
-        prev.map((r) => {
-          const tenantsInRoom = tenants
-            .map((t) => (t.id === tenant.id ? tenant : t))
-            .filter((t) => t.roomId === r.id);
+      // Refresh data
+      const [refreshedTenants, refreshedRooms] = await Promise.all([
+        getAllTenants(),
+        getAllRooms(),
+      ]);
 
-          return {
-            ...r,
-            occupied: tenantsInRoom.length > 0,
-            tenantNames: tenantsInRoom.map((t) => t.name),
-          };
-        })
-      );
+      setTenants(refreshedTenants);
+      setRooms(refreshedRooms);
 
       setEditingId(null);
       setBackupTenant(null);
@@ -187,47 +231,113 @@ export default function TenantsPage() {
                               )
                             }
                           />
-                          <Input
-                            type="number"
-                            value={tenant.rent || 0}
-                            onChange={(e) =>
-                              setTenants((prev) =>
-                                prev.map((t) =>
-                                  t.id === tenant.id
-                                    ? { ...t, rent: Number(e.target.value) }
-                                    : t
+                          <div className="space-y-1">
+                            <label className="text-sm text-muted-foreground">
+                              Rent (calculated automatically)
+                            </label>
+                            <Input
+                              type="text"
+                              value={
+                                tenant.roomName
+                                  ? `₱${calculateTenantRent(tenant).toFixed(2)}`
+                                  : "No room assigned"
+                              }
+                              disabled
+                              className="bg-muted cursor-not-allowed"
+                            />
+                            {tenant.roomName && (
+                              <p className="text-xs text-muted-foreground">
+                                Room rent divided by {tenants.filter((t) => t.roomName === tenant.roomName).length} tenant(s)
+                              </p>
+                            )}
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-sm text-muted-foreground">
+                              Room
+                            </label>
+                            <select
+                              title="Room"
+                              value={tenant.roomId || ""}
+                              onChange={(e) =>
+                                setTenants((prev) =>
+                                  prev.map((t) =>
+                                    t.id === tenant.id
+                                      ? {
+                                          ...t,
+                                          roomId: e.target.value || null,
+                                          roomName:
+                                            rooms.find(
+                                              (r) => r.id === e.target.value
+                                            )?.name || "",
+                                        }
+                                      : t
+                                  )
                                 )
-                              )
-                            }
-                          />
-                          <select
-                            title="Room"
-                            value={tenant.roomId || ""}
-                            onChange={(e) =>
-                              setTenants((prev) =>
-                                prev.map((t) =>
-                                  t.id === tenant.id
-                                    ? {
-                                        ...t,
-                                        roomId: e.target.value || null,
-                                        roomName:
-                                          rooms.find(
-                                            (r) => r.id === e.target.value
-                                          )?.name || "",
-                                      }
-                                    : t
+                              }
+                              className="border rounded p-2 w-full"
+                            >
+                              <option value="">No Room</option>
+                              {rooms.map((r) => (
+                                <option key={r.id} value={r.id}>
+                                  {r.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium text-foreground">
+                              Payment Status
+                            </label>
+                            <Select
+                              value={tenant.paymentStatus || "not_paid"}
+                              onValueChange={(value) =>
+                                setTenants((prev) =>
+                                  prev.map((t) =>
+                                    t.id === tenant.id
+                                      ? { ...t, paymentStatus: value }
+                                      : t
+                                  )
                                 )
-                              )
-                            }
-                            className="border rounded p-2"
-                          >
-                            <option value="">No Room</option>
-                            {rooms.map((r) => (
-                              <option key={r.id} value={r.id}>
-                                {r.name}
-                              </option>
-                            ))}
-                          </select>
+                              }
+                            >
+                              <SelectTrigger className="w-full bg-background border-2 hover:border-primary transition-colors">
+                                <SelectValue>
+                                  {tenant.paymentStatus === "paid" ? (
+                                    <span className="flex items-center gap-2">
+                                      <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                                      Paid
+                                    </span>
+                                  ) : (
+                                    <span className="flex items-center gap-2">
+                                      <span className="h-2 w-2 rounded-full bg-red-500"></span>
+                                      Not Paid
+                                    </span>
+                                  )}
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent className="bg-popover border-2 border-border shadow-xl z-50 min-w-[200px]">
+                                <SelectItem 
+                                  value="paid"
+                                  className="cursor-pointer hover:bg-green-50 dark:hover:bg-green-950"
+                                >
+                                  <span className="flex items-center gap-2">
+                                    <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                                    Paid
+                                  </span>
+                                </SelectItem>
+                                <SelectItem 
+                                  value="not_paid"
+                                  className="cursor-pointer hover:bg-red-50 dark:hover:bg-red-950"
+                                >
+                                  <span className="flex items-center gap-2">
+                                    <span className="h-2 w-2 rounded-full bg-red-500"></span>
+                                    Not Paid
+                                  </span>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
 
                           <Button
                             className="w-full"
@@ -251,8 +361,20 @@ export default function TenantsPage() {
                             Room: {tenant.roomName || "None"}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Rent: ₱{tenant.rent}
+                            Rent: {tenant.roomName ? `₱${calculateTenantRent(tenant).toFixed(2)}` : "No rent"}
                           </p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-sm text-muted-foreground">Payment:</span>
+                            <span
+                              className={`text-sm font-medium ${
+                                tenant.paymentStatus === "paid"
+                                  ? "text-green-600"
+                                  : "text-red-600"
+                              }`}
+                            >
+                              {tenant.paymentStatus === "paid" ? "Paid" : "Not Paid"}
+                            </span>
+                          </div>
                           <Button
                             className="mt-4 w-full"
                             variant="outline"

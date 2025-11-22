@@ -19,6 +19,7 @@ import { useToast } from "../ToastProvider";
 const formSchema = z.object({
   name: z.string().min(3, "Room name must be at least 3 characters"),
   rent: z.number().int().nonnegative(),
+  status: z.enum(["available", "occupied", "reserved"]).optional(),
   tenantIds: z.array(z.string()).optional(),
 });
 
@@ -41,6 +42,7 @@ export function RoomForm() {
     defaultValues: {
       name: "",
       rent: 0,
+      status: "available",
       tenantIds: [],
     },
   });
@@ -67,12 +69,17 @@ export function RoomForm() {
         values.tenantIds?.includes(t.id)
       );
 
-      const occupied = assignedTenants.length > 0;
+      // Determine status: if tenants assigned, use occupied; otherwise use provided status or default to available
+      const status = assignedTenants.length > 0 
+        ? "occupied" 
+        : (values.status || "available");
+      const occupied = status === "occupied";
 
       const roomPayload = {
         name: values.name,
         rent: values.rent,
         occupied,
+        status,
         tenantNames: assignedTenants.map((t) => t.name),
       };
 
@@ -92,7 +99,7 @@ export function RoomForm() {
         type: "success",
       });
 
-      form.reset({ name: "", rent: 0, tenantIds: [] });
+      form.reset({ name: "", rent: 0, status: "available", tenantIds: [] });
 
       const refreshed = await getAllTenants();
       setTenants(refreshed.filter((t: Tenant) => !t.roomName));
@@ -146,6 +153,29 @@ export function RoomForm() {
                   }}
                   placeholder="12000"
                 />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Status */}
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Status</FormLabel>
+              <FormControl>
+                <select
+                  className="border p-2 rounded w-full"
+                  {...field}
+                  value={field.value || "available"}
+                >
+                  <option value="available">Available</option>
+                  <option value="occupied">Occupied</option>
+                  <option value="reserved">Reserved</option>
+                </select>
               </FormControl>
               <FormMessage />
             </FormItem>

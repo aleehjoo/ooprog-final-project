@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAllRooms, patchRoom, getAllTenants } from "@/lib/api";
+import { getAllRooms, patchRoom, getAllTenants, patchTenant } from "@/lib/api";
 
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,8 @@ export interface Room {
   id: string;
   name: string;
   rent: number;
-  occupied: boolean;
+  occupied?: boolean;
+  status?: string;
   tenantNames: string[];
 }
 
@@ -34,7 +35,7 @@ export interface Tenant {
 export default function RoomsPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [filter, setFilter] = useState<"All" | "Available" | "Occupied">("All");
+  const [filter, setFilter] = useState<"All" | "Available" | "Occupied" | "Reserved">("All");
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [backupRoom, setBackupRoom] = useState<Room | null>(null);
@@ -55,16 +56,28 @@ export default function RoomsPage() {
   }, []);
 
   const filteredRooms = rooms.filter((room) => {
-    if (filter === "Available" && room.occupied) return false;
-    if (filter === "Occupied" && !room.occupied) return false;
+    const status = (room as any).status || (room.occupied ? "occupied" : "available");
+    if (filter === "Available" && status !== "available") return false;
+    if (filter === "Occupied" && status !== "occupied") return false;
+    if (filter === "Reserved" && status !== "reserved") return false;
     if (search && !room.name.toLowerCase().includes(search.toLowerCase()))
       return false;
     return true;
   });
 
   const total = rooms.length;
-  const available = rooms.filter((r) => !r.occupied).length;
-  const occupied = rooms.filter((r) => r.occupied).length;
+  const available = rooms.filter((r) => {
+    const status = (r as any).status || (r.occupied ? "occupied" : "available");
+    return status === "available";
+  }).length;
+  const occupied = rooms.filter((r) => {
+    const status = (r as any).status || (r.occupied ? "occupied" : "available");
+    return status === "occupied";
+  }).length;
+  const reserved = rooms.filter((r) => {
+    const status = (r as any).status || (r.occupied ? "occupied" : "available");
+    return status === "reserved";
+  }).length;
 
   const handleEdit = (room: Room) => {
     setBackupRoom({ ...room }); // backup original room
@@ -84,14 +97,56 @@ export default function RoomsPage() {
   const handleSave = async (roomId: string, updatedRoom: Room) => {
     setSavingId(roomId);
 
-    // Auto-set occupied value
+    // Get the original room to compare tenant changes
+    const originalRoom = rooms.find((r) => r.id === roomId);
+    if (!originalRoom) return;
+
+    // Auto-set status based on tenantNames
+    let status = "available";
+    if (updatedRoom.tenantNames.length > 0) {
+      status = "occupied";
+    }
     const patchedRoom = {
       ...updatedRoom,
       occupied: updatedRoom.tenantNames.length > 0,
+      status: status,
     };
 
     try {
       await patchRoom(roomId, patchedRoom);
+
+      // Update tenants: assign roomName to newly added tenants, remove from unassigned
+      const originalTenantNames = originalRoom.tenantNames || [];
+      const newTenantNames = updatedRoom.tenantNames || [];
+      
+      // Find tenants that were added
+      const addedTenants = newTenantNames.filter(
+        (name) => !originalTenantNames.includes(name)
+      );
+      // Find tenants that were removed
+      const removedTenants = originalTenantNames.filter(
+        (name) => !newTenantNames.includes(name)
+      );
+
+      // Update added tenants with room name
+      for (const tenantName of addedTenants) {
+        const tenant = tenants.find((t) => t.name === tenantName);
+        if (tenant) {
+          await patchTenant(tenant.id, { roomName: updatedRoom.name });
+        }
+      }
+
+      // Update removed tenants to clear room name
+      for (const tenantName of removedTenants) {
+        const tenant = tenants.find((t) => t.name === tenantName);
+        if (tenant) {
+          await patchTenant(tenant.id, { roomName: "" });
+        }
+      }
+
+      // Refresh tenants data to reflect changes
+      const refreshedTenants = await getAllTenants();
+      setTenants(refreshedTenants);
 
       setRooms((prev) => prev.map((r) => (r.id === roomId ? patchedRoom : r)));
 
@@ -105,10 +160,26 @@ export default function RoomsPage() {
   };
 
   // Get available tenants for multi-select
+  // A tenant is available if:
+  // 1. They are not assigned to any room (no roomId/roomName), OR
+  // 2. They are already in this room's tenantNames list
   const getAvailableTenants = (room: Room) => {
-    return tenants.filter(
-      (t) => !t.roomId || room.tenantNames.includes(t.name)
-    );
+    // Get all tenant names that are assigned to other rooms
+    const assignedTenantNames = new Set<string>();
+    rooms.forEach((r) => {
+      if (r.id !== room.id && r.tenantNames && r.tenantNames.length > 0) {
+        r.tenantNames.forEach((name) => assignedTenantNames.add(name));
+      }
+    });
+
+    return tenants.filter((t) => {
+      // Include if tenant is already in this room
+      if (room.tenantNames.includes(t.name)) {
+        return true;
+      }
+      // Include if tenant is not assigned to any other room
+      return !assignedTenantNames.has(t.name);
+    });
   };
 
   return (
@@ -116,7 +187,7 @@ export default function RoomsPage() {
       <Header title="Room Management" subtitle={`${total} total rooms`} />
       <div className="flex flex-col flex-1 p-8 overflow-hidden">
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           {[
             {
               label: "Total Rooms",
@@ -132,6 +203,11 @@ export default function RoomsPage() {
               label: "Occupied Rooms",
               value: occupied,
               className: "text-destructive",
+            },
+            {
+              label: "Reserved Rooms",
+              value: reserved,
+              className: "text-yellow-600",
             },
           ].map((stat, i) => (
             <Card key={i}>
@@ -152,7 +228,7 @@ export default function RoomsPage() {
           <CardContent>
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
               <div className="flex gap-2 flex-wrap">
-                {["All", "Available", "Occupied"].map((f) => (
+                {["All", "Available", "Occupied", "Reserved"].map((f) => (
                   <Button
                     key={f}
                     size="sm"
@@ -183,7 +259,7 @@ export default function RoomsPage() {
         </Card>
 
         {/* Room list */}
-        <div className="flex-1 overflow-y-auto pr-2">
+        <div className="flex-1 overflow-y-auto pr-2 pb-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {filteredRooms.map((room) => {
               const isEditing = editingId === room.id;
@@ -207,6 +283,7 @@ export default function RoomsPage() {
                         <Input
                           type="number"
                           value={room.rent}
+                          placeholder="Rent in cents (e.g., 12000 for ₱120.00)"
                           onChange={(e) =>
                             setRooms((prev) =>
                               prev.map((r) =>
@@ -217,6 +294,83 @@ export default function RoomsPage() {
                             )
                           }
                         />
+
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium text-foreground">
+                            Status
+                          </p>
+                          {room.tenantNames.length > 0 ? (
+                            <div className="p-3 bg-red-50 dark:bg-red-950/20 rounded-md border-2 border-red-200 dark:border-red-900">
+                              <p className="text-sm font-semibold text-red-700 dark:text-red-400 flex items-center gap-2">
+                                <span className="h-2 w-2 rounded-full bg-red-600"></span>
+                                Occupied
+                              </p>
+                              <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                Status is automatically set to "Occupied" when tenants are assigned
+                              </p>
+                            </div>
+                          ) : (
+                            <Select
+                              value={
+                                (() => {
+                                  const currentStatus = (room as any).status || "available";
+                                  return currentStatus === "reserved" ? "reserved" : "available";
+                                })()
+                              }
+                              onValueChange={(value) => {
+                                setRooms((prev) =>
+                                  prev.map((r) =>
+                                    r.id === room.id
+                                      ? { ...r, status: value, occupied: false }
+                                      : r
+                                  )
+                                );
+                              }}
+                            >
+                              <SelectTrigger className="w-full bg-background border-2 hover:border-primary transition-colors">
+                                <SelectValue>
+                                  {(() => {
+                                    const currentStatus = (room as any).status || "available";
+                                    if (currentStatus === "reserved") {
+                                      return (
+                                        <span className="flex items-center gap-2">
+                                          <span className="h-2 w-2 rounded-full bg-yellow-500"></span>
+                                          Reserved
+                                        </span>
+                                      );
+                                    }
+                                    return (
+                                      <span className="flex items-center gap-2">
+                                        <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                                        Available
+                                      </span>
+                                    );
+                                  })()}
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent className="bg-popover border-2 border-border shadow-xl z-50 min-w-[200px]">
+                                <SelectItem 
+                                  value="available"
+                                  className="cursor-pointer hover:bg-green-50 dark:hover:bg-green-950"
+                                >
+                                  <span className="flex items-center gap-2">
+                                    <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                                    Available
+                                  </span>
+                                </SelectItem>
+                                <SelectItem 
+                                  value="reserved"
+                                  className="cursor-pointer hover:bg-yellow-50 dark:hover:bg-yellow-950"
+                                >
+                                  <span className="flex items-center gap-2">
+                                    <span className="h-2 w-2 rounded-full bg-yellow-500"></span>
+                                    Reserved
+                                  </span>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
 
                         <div className="space-y-2">
                           <p className="text-sm text-muted-foreground">
@@ -272,18 +426,19 @@ export default function RoomsPage() {
                     ) : (
                       <>
                         <p className="text-lg font-semibold">{room.name}</p>
-                        <p>Rent: ₱{room.rent.toFixed(2)}</p>
+                        <p>Rent: ₱{(room.rent / 100).toFixed(2)}</p>
                         <p>
                           Status:{" "}
-                          {room.occupied ? (
-                            <span className="text-red-600 font-medium">
-                              Occupied
-                            </span>
-                          ) : (
-                            <span className="text-green-600 font-medium">
-                              Available
-                            </span>
-                          )}
+                          {(() => {
+                            const status = (room as any).status || (room.occupied ? "occupied" : "available");
+                            if (status === "occupied") {
+                              return <span className="text-red-600 font-medium">Occupied</span>;
+                            } else if (status === "reserved") {
+                              return <span className="text-yellow-600 font-medium">Reserved</span>;
+                            } else {
+                              return <span className="text-green-600 font-medium">Available</span>;
+                            }
+                          })()}
                         </p>
                         <p>
                           Tenants:{" "}

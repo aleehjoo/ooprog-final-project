@@ -15,6 +15,7 @@ import {
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { useToast } from "../ToastProvider";
+import { getAllRooms, addTenant, patchRoom } from "@/lib/api";
 
 interface Room {
   id: string;
@@ -28,8 +29,8 @@ const formSchema = z.object({
   name: z
     .string()
     .min(3, { message: "Tenant Name must be at least 3 characters." }),
-  rent: z.number().positive({ message: "Rent must be positive" }),
   roomName: z.string(),
+  paymentStatus: z.enum(["paid", "not_paid"]).optional(),
 });
 
 export function TenantForm() {
@@ -38,16 +39,15 @@ export function TenantForm() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: "", rent: 0, roomName: "" },
+    defaultValues: { name: "", roomName: "", paymentStatus: "not_paid" },
   });
 
   // Fetch available rooms
   useEffect(() => {
     async function fetchRooms() {
       try {
-        const res = await fetch("http://localhost:8080/api/rooms");
-        const data: Room[] = await res.json();
-        setRooms(data.filter((r) => !r.occupied)); // only available rooms
+        const data = await getAllRooms();
+        setRooms(data);
       } catch (err) {
         console.error(err);
         addToast({
@@ -63,26 +63,27 @@ export function TenantForm() {
   // Submit form
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      const res = await fetch("http://localhost:8080/api/tenants", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-      if (!res.ok) throw new Error("Failed to create tenant");
-      const tenant = await res.json();
+      // Rent will be calculated automatically based on room assignment
+      const tenantData = {
+        name: values.name,
+        roomName: values.roomName || "",
+        rent: 0, // Will be calculated when room is assigned
+        paymentStatus: values.paymentStatus || "not_paid",
+      };
+      
+      const tenant = await addTenant(tenantData);
 
-      const room = rooms.find((r) => r.name === values.roomName);
-      if (room) {
-        const updatedTenantNames = [...(room.tenantNames || []), tenant.name];
-        const patchRes = await fetch(
-          `http://localhost:8080/api/rooms/${room.id}`,
-          {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ tenantNames: updatedTenantNames }),
-          }
-        );
-        if (!patchRes.ok) throw new Error("Failed to update room");
+      // If tenant is assigned to a room, update the room's tenantNames
+      if (values.roomName) {
+        const room = rooms.find((r) => r.name === values.roomName);
+        if (room) {
+          const updatedTenantNames = [...(room.tenantNames || []), tenant.name];
+          await patchRoom(room.id, {
+            tenantNames: updatedTenantNames,
+            occupied: true,
+            status: "occupied",
+          });
+        }
       }
 
       addToast({
@@ -91,8 +92,7 @@ export function TenantForm() {
         type: "success",
       });
 
-      form.reset();
-      setRooms((prev) => prev.filter((r) => r.id !== room?.id));
+      form.reset({ name: "", roomName: "", paymentStatus: "not_paid" });
     } catch (err) {
       console.error(err);
       addToast({
@@ -121,20 +121,18 @@ export function TenantForm() {
           )}
         />
 
-        {/* Rent */}
+        {/* Payment Status */}
         <FormField
           control={form.control}
-          name="rent"
+          name="paymentStatus"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Rent</FormLabel>
+              <FormLabel>Payment Status</FormLabel>
               <FormControl>
-                <Input
-                  type="number"
-                  placeholder="10000"
-                  {...field}
-                  onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                />
+                <select {...field} className="border rounded p-2 w-full">
+                  <option value="not_paid">Not Paid</option>
+                  <option value="paid">Paid</option>
+                </select>
               </FormControl>
               <FormMessage />
             </FormItem>

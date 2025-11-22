@@ -1,6 +1,7 @@
 "use client";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { User } from "lucide-react";
 
 interface HeaderProps {
   title: string;
@@ -17,8 +18,8 @@ export function Header({ title, subtitle }: HeaderProps) {
         </div>
         <div className="flex items-center gap-4">
           <Avatar>
-            <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
-              MS
+            <AvatarFallback className="bg-muted text-muted-foreground">
+              <User className="h-4 w-4" />
             </AvatarFallback>
           </Avatar>
         </div>

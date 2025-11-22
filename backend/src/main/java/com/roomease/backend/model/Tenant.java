@@ -1,15 +1,13 @@
 package com.roomease.backend.model;
 
-import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "tenants")
-public class Tenant {
-  @Id
-  private String id;
+public class Tenant extends BaseEntity {
   private String name;
   private double rent;
   private String roomName;
+  private String paymentStatus;
 
   public Tenant() {
   }
@@ -18,15 +16,6 @@ public class Tenant {
     this.name = name;
     this.rent = rent;
     this.roomName = roomName;
-  }
-
-  // getters & setters
-  public String getId() {
-    return id;
-  }
-
-  public void setId(String id) {
-    this.id = id;
   }
 
   public String getName() {
@@ -51,5 +40,23 @@ public class Tenant {
 
   public void setRoomName(String roomName) {
     this.roomName = roomName;
+  }
+
+  public String getPaymentStatus() {
+    return paymentStatus;
+  }
+
+  public void setPaymentStatus(String paymentStatus) {
+    this.paymentStatus = paymentStatus;
+  }
+
+  @Override
+  public boolean isValid() {
+    return name != null && !name.trim().isEmpty() && rent >= 0;
+  }
+
+  @Override
+  public String getDisplayName() {
+    return name != null ? name : "Unnamed Tenant";
   }
 }
