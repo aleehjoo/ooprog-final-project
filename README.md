@@ -48,15 +48,21 @@ If everything is working, you should receive a success JSON response.
 cd frontend
 ```
 
-2. Start development server:
+2. Install the required dependencies:
+
+```bash
+npm install
+```
+
+3. Start development server:
 
 ```bash
 npm run dev
 ```
 
-3. View in browser:
+4. View in browser:
 
-Open [http://localhost:3000](http://localhost:3000)
+Open [Tap me!](http://localhost:3000)
 
 
 # 🏠 RoomEase — Smart Property & Tenant Management System
