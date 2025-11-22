@@ -3,7 +3,7 @@
 **Alejandro Umila**  
 **Section:** C2B  
 
-> 📈 **Flowchart:** [*(link here)*](https://www.figma.com/board/OzD9np7jKdQ6uz3eBXRI62/Untitled?node-id=0-1&t=GgXQzGZGsnTuQPgr-1)
+> 📈 **UML Diagram:** [*(link here)*](https://www.figma.com/board/OzD9np7jKdQ6uz3eBXRI62/Untitled?node-id=0-1&t=GgXQzGZGsnTuQPgr-1)
 # Project Structure
 
 ```
