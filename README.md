@@ -3,7 +3,7 @@
 **Alejandro Umila**  
 **Section:** C2B  
 
-> 📈 **Flowchart:** *(link here)*
+> 📈 **Flowchart:** [*(link here)*](https://www.figma.com/board/OzD9np7jKdQ6uz3eBXRI62/Untitled?node-id=0-1&t=GgXQzGZGsnTuQPgr-1)
 # Project Structure
 
 ```
@@ -62,7 +62,7 @@ npm run dev
 
 4. View in browser:
 
-Open (http://localhost:3000) or [Tap me!](http://localhost:3000)
+Open http://localhost:3000 or [Tap me!](http://localhost:3000)
 
 
 # 🏠 RoomEase — Smart Property & Tenant Management System
