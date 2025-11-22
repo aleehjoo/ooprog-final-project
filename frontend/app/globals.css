@@ -65,7 +65,9 @@
   * {
     @apply border-border outline-primary/50;
   }
+
+  html,
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground overflow-hidden;
   }
 }

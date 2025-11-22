@@ -35,11 +35,6 @@ const navItems: NavItem[] = [
     href: "/tenants",
     icon: <Users className="h-5 w-5" />,
   },
-  {
-    label: "Payments",
-    href: "/payments",
-    icon: <DollarSign className="h-5 w-5" />,
-  },
 ];
 
 export function Sidebar() {
