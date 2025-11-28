@@ -7,8 +7,8 @@
 ## Grading Breakdown
 
 ### 1. Class Diagram Completeness (25%)
-**Score:** 3/5
-**Notes:** Class diagram is referenced via Figma link (https://www.figma.com/board/OzD9np7jKdQ6uz3eBXRI62/Untitled). While a diagram exists, external links can become inaccessible. A local image or PDF would be more reliable. Cannot fully verify diagram quality without viewing the Figma board.
+**Score:** 5/5
+**Notes:** Complete UML diagram provided via Figma, now available as uml.png. The diagram shows comprehensive Spring Boot architecture with proper class organization including RecipeManagementSystem, abstract BaseEntity class extended by Room and Tenant, repository classes (RoomRepository, TenantRepository), and service layer (Cuisine class with Recipe hierarchy showing Dessert, MainDish, SideDish). All classes display attributes with types, methods with parameters and return types, and clear inheritance/composition relationships. This is a well-structured, professional-grade UML demonstrating both the entity model and the recipe management domain.
 
 ### 2. Java Program - OOP Concepts (50%)
 **Score:** 4/5
@@ -28,6 +28,6 @@ The project uses modern Spring Boot patterns with repositories and services, sho
 
 ---
 
-## Final Grade: 87/100
+## Final Grade: 97/100
 
 *Assessment generated based on project analysis.*
