@@ -26,8 +26,20 @@ The project uses modern Spring Boot patterns with repositories and services, sho
 ### 4. Base Grade (10%)
 **Score:** 5/5
 
+### 5. Extra Points (up to 6)
+
+**Features:** 3/5
+- Database
+- UI Web
+
+**Code Quality:** 1.0/1.0
+- Variable naming: 0.5/0.5
+- Code organization: 0.5/0.5
+
+**Extra Points Total:** +4.0
+
 ---
 
-## Final Grade: 97/100
+## Final Grade: 97 + 4.0 = **101/100**
 
 *Assessment generated based on project analysis.*
